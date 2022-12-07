@@ -1,0 +1,247 @@
+﻿Build1=CarPI,Appsright.Car.Pi
+File1=carLayout.bal
+FileGroup1=Default Group
+Group=Default Group
+Library1=core
+Library2=json
+Library3=okhttputils2
+Library4=xui
+Library5=xui views
+ManifestCode='This code will be applied to the manifest file during compilation.~\n~'You do not need to modify it in most cases.~\n~'See this link for for more information: https://www.b4x.com/forum/showthread.php?p=78136~\n~AddManifestText(~\n~<uses-sdk android:minSdkVersion="14" android:targetSdkVersion="30"/>~\n~<supports-screens android:largeScreens="true" ~\n~    android:normalScreens="true" ~\n~    android:smallScreens="true" ~\n~    android:anyDensity="true"/>)~\n~SetApplicationAttribute(android:icon, "@drawable/icon")~\n~'SetApplicationAttribute(android:label, "$LABEL$")~\n~SetApplicationAttribute(android:label, "AppsRight.CarPIClient")~\n~SetApplicationAttribute(android:usesCleartextTraffic, "true")~\n~CreateResourceFromFile(Macro, Themes.LightTheme)~\n~'End of default text.~\n~
+Module1=Starter
+NumberOfFiles=1
+NumberOfLibraries=5
+NumberOfModules=1
+Version=12
+@EndOfDesignText@
+#Region  Project Attributes 
+	#ApplicationLabel: CarPI
+	#VersionCode: 1
+	#VersionName: 
+	'SupportedOrientations possible values: unspecified, landscape or portrait.
+	#SupportedOrientations: unspecified
+	#CanInstallToExternalStorage: False
+#End Region
+
+#Region  Activity Attributes 
+	#FullScreen: False
+	#IncludeTitle: False
+#End Region
+
+Sub Process_Globals
+	'These global variables will be declared once when the application starts.
+	'These variables can be accessed from all modules.
+	Private xui As XUI
+End Sub
+
+'https://github.com/sbhrepo/carPi/blob/main/src/recorder.py
+
+Sub Globals
+	'These global variables will be redeclared each time the activity is created.
+	Private Backward As Button
+	Private Forward As Button
+	Private Left As Button
+	Private Right As Button
+	Private Shutdown As Button
+	Private Stop As Button
+	Private Speed As EditText
+	Private ResultsLabel As Label
+	'Private CarIP = As String ("http://192.168.13.106:8090/")
+	'Private CarIP = As String ("http://192.168.1.105:8090/") ' need to add firewall rule to let it get to R.PI
+	Private baseURL As EditText
+	Private On As Button
+	Private Off As Button
+	Private BandF As Button 'temp to run back and forward for runTime seconds
+	Private runTime As EditText
+	Private StopNav As Button
+	
+	Private Status As Button
+	Private StartRecording As Button
+	Private StopRecording As Button
+	Private CancelRecording As Button
+	Private RefreshRecording As Button
+	Private Recordings As ListView
+End Sub
+
+Sub Activity_Create(FirstTime As Boolean)
+	Activity.LoadLayout("carLayout")
+	Log("Welcome to Car-PI")
+End Sub
+
+Sub Activity_Resume
+
+End Sub
+
+Sub Activity_Pause (UserClosed As Boolean)
+
+End Sub
+
+'https://www.b4x.com/etp.html?vimeography_gallery=1&vimeography_video=256583317
+
+
+Private Sub Stop_Click
+	Log ("stop")
+	Dim CommandPath As String
+	CommandPath = baseURL.Text & "drive/stop" 
+	restCall(CommandPath)
+End Sub
+
+Private Sub Speed_EnterPressed
+	Log ("Speed enter")
+End Sub
+
+Private Sub Right_Click
+	Log ("right " & Speed.Text)
+	Dim CommandPath As String
+	CommandPath = baseURL.Text & "drive/turnRight/" & Speed.Text
+	restCall(CommandPath)
+End Sub
+
+
+Private Sub Left_Click
+	Log ("left " & Speed.Text)
+	Dim CommandPath As String
+	CommandPath = baseURL.Text & "drive/turnLeft/" & Speed.Text
+	restCall(CommandPath)
+End Sub
+
+Private Sub Forward_Click
+	Log ("front " & Speed.Text)
+	Dim CommandPath As String
+	CommandPath = baseURL.Text & "drive/front/" & Speed.Text
+	restCall(CommandPath)
+End Sub
+
+Private Sub Backward_Click
+	Log ("back " & Speed.Text)
+	Dim CommandPath As String
+	CommandPath = baseURL.Text & "drive/back/" & Speed.Text
+	restCall(CommandPath)
+End Sub
+
+
+Private Sub On_Click
+	Log ("power on")
+	Dim CommandPath As String
+	CommandPath = baseURL.Text & "control/poweron"
+	restCall(CommandPath)
+End Sub
+
+Private Sub Off_Click
+	Log ("power on")
+	Dim CommandPath As String
+	CommandPath = baseURL.Text & "control/poweroff"
+	restCall(CommandPath)
+End Sub
+
+Private Sub Shutdown_Click
+	Log ("Shutdown")
+	Dim CommandPath As String
+	CommandPath = baseURL.Text & "control/shutdown"
+	restCall(CommandPath)
+End Sub
+
+
+Private Sub BandF_Click
+	Log ("Back and Forward forth speed=" & Speed.Text & " time=" & runTime.Text )
+	Dim CommandPath As String
+	CommandPath = baseURL.Text & "navigate/start/BackAndForth?speed=" & Speed.Text &"&time="&runTime.Text
+	restCall(CommandPath)
+	
+End Sub
+
+Private Sub StopNav_Click
+	Log ("Back and Forward Stop")
+	Dim CommandPath As String
+	CommandPath = baseURL.Text & "navigate/stop"
+	restCall(CommandPath)	
+End Sub
+
+
+Private Sub StartRecording_Click
+	Log ("Start recording")	
+	Dim input As B4XInputTemplate
+	Dim dialog As B4XDialog	
+	dialog.Initialize(Activity)
+	input.Initialize
+	input.lblTitle.Text = "Enter Recording Name:"	
+	Wait For (dialog.ShowTemplate(input, "OK", "", "CANCEL")) Complete (Result As Int)
+	If Result = xui.DialogResponse_Positive Then
+		Log (input.Text)
+		Dim CommandPath As String
+		CommandPath = baseURL.Text & "recording/start/" & input.Text
+		restCall(CommandPath)		
+	End If	
+End Sub
+
+Private Sub StopRecording_Click
+	Log ("Stop recording")
+	Dim CommandPath As String
+	CommandPath = baseURL.Text & "recording/stop"
+	restCall(CommandPath)	
+End Sub
+
+Private Sub Recordings_ItemClick (Position As Int, Value As Object)
+	
+End Sub
+
+Private Sub RefreshRecording_Click
+	Log ("Refresh Recording")
+	Dim CommandPath As String
+	CommandPath = baseURL.Text & "recordings"
+	restCall(CommandPath)	
+End Sub
+
+Private Sub Status_Click
+	Log ("Get Status")
+	Dim CommandPath As String
+	CommandPath = baseURL.Text & "status"
+	restCall(CommandPath)	
+End Sub
+
+Private Sub CancelRecording_Click
+	Log ("Cancel recording")
+	Dim CommandPath As String
+	CommandPath = baseURL.Text & "recording/cancel"
+	restCall(CommandPath)
+End Sub
+
+
+'https://www.b4x.com/android/forum/
+
+Private Sub restCall(CommandPath As String) 
+	Log ("In restCall with " & CommandPath)
+	Dim job As HttpJob
+	job.Initialize("Power",Me)
+	job.Download(CommandPath)
+	Wait For (job) JobDone (job As HttpJob)
+	If (job.Success) Then
+		restCallback(CommandPath,job.GetString,False)
+	Else
+		restCallback(CommandPath,job.ErrorMessage,True)
+	End If	
+End Sub
+
+' call at the end of the URL get (response) and log the info, 
+Private Sub restCallback(CommandPath As String, returnValue As String, err As Boolean)
+	Log ("In restCallback with ["& err & "] " & CommandPath & ":" & returnValue )
+	If (err == False) Then
+		Log ("Found:" & returnValue)
+		ResultsLabel.Text = returnValue
+		
+		If (CommandPath.EndsWith("recordings")) Then ' refresh list
+			Dim buffer() As String = Regex.Split(" ",returnValue)
+			Recordings.Clear
+			For x = 0 To buffer.Length -1 
+				'Log (buffer(x))
+				Recordings.AddSingleLine(buffer(x))
+			Next			
+		End If
+		
+		
+		'Return job.GetString
+	Else
+		Log ("Error:" & returnValue)
+		ResultsLabel.Text = "Error:" & returnValue
+	End If	
+End Sub
