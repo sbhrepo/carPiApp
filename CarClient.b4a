@@ -51,9 +51,6 @@ Sub Globals
 	Private baseURL As EditText
 	Private On As Button
 	Private Off As Button
-	Private BandF As Button 'temp to run back and forward for runTime seconds
-	Private runTime As EditText
-	Private StopNav As Button
 	
 	Private Status As Button
 	Private StartRecording As Button
@@ -61,6 +58,7 @@ Sub Globals
 	Private CancelRecording As Button
 	Private RefreshRecording As Button
 	Private Recordings As ListView
+	Private Repitition As EditText
 End Sub
 
 Sub Activity_Create(FirstTime As Boolean)
@@ -142,22 +140,6 @@ Private Sub Shutdown_Click
 End Sub
 
 
-Private Sub BandF_Click
-	Log ("Back and Forward forth speed=" & Speed.Text & " time=" & runTime.Text )
-	Dim CommandPath As String
-	CommandPath = baseURL.Text & "navigate/start/BackAndForth?speed=" & Speed.Text &"&time="&runTime.Text
-	restCall(CommandPath)
-	
-End Sub
-
-Private Sub StopNav_Click
-	Log ("Back and Forward Stop")
-	Dim CommandPath As String
-	CommandPath = baseURL.Text & "navigate/stop"
-	restCall(CommandPath)	
-End Sub
-
-
 Private Sub StartRecording_Click
 	Log ("Start recording")	
 	Dim input As B4XInputTemplate
@@ -182,7 +164,10 @@ Private Sub StopRecording_Click
 End Sub
 
 Private Sub Recordings_ItemClick (Position As Int, Value As Object)
-	
+	Log ("Play recording " & Value)
+	 Dim CommandPath As String
+	CommandPath = baseURL.Text & "recording/play/" & Value & "/" & Repitition.Text
+	restCall(CommandPath)
 End Sub
 
 Private Sub RefreshRecording_Click
@@ -205,6 +190,9 @@ Private Sub CancelRecording_Click
 	CommandPath = baseURL.Text & "recording/cancel"
 	restCall(CommandPath)
 End Sub
+
+
+
 
 
 'https://www.b4x.com/android/forum/
