@@ -40,8 +40,8 @@ Sub Globals
 	'These global variables will be redeclared each time the activity is created.
 	Private Backward As Button
 	Private Forward As Button
-	Private Left As Button
-	Private Right As Button
+	Private TurnLeft As Button
+	Private TurnRight As Button
 	Private Shutdown As Button
 	Private Stop As Button
 	Private Speed As EditText
@@ -59,6 +59,8 @@ Sub Globals
 	Private RefreshRecording As Button
 	Private Recordings As ListView
 	Private Repitition As EditText
+	Private Right As Button
+	Private Left As Button
 End Sub
 
 Sub Activity_Create(FirstTime As Boolean)
@@ -76,7 +78,11 @@ End Sub
 
 'https://www.b4x.com/etp.html?vimeography_gallery=1&vimeography_video=256583317
 
+Private Sub Speed_EnterPressed
+	Log ("Speed enter")
+End Sub
 
+' Engine Operations
 Private Sub Stop_Click
 	Log ("stop")
 	Dim CommandPath As String
@@ -84,20 +90,16 @@ Private Sub Stop_Click
 	restCall(CommandPath)
 End Sub
 
-Private Sub Speed_EnterPressed
-	Log ("Speed enter")
-End Sub
-
-Private Sub Right_Click
-	Log ("right " & Speed.Text)
+Private Sub TurnRight_Click
+	Log ("Turn right " & Speed.Text)
 	Dim CommandPath As String
 	CommandPath = baseURL.Text & "drive/turnRight/" & Speed.Text
 	restCall(CommandPath)
 End Sub
 
 
-Private Sub Left_Click
-	Log ("left " & Speed.Text)
+Private Sub TurnLeft_Click
+	Log ("Turn left " & Speed.Text)
 	Dim CommandPath As String
 	CommandPath = baseURL.Text & "drive/turnLeft/" & Speed.Text
 	restCall(CommandPath)
@@ -117,6 +119,22 @@ Private Sub Backward_Click
 	restCall(CommandPath)
 End Sub
 
+Private Sub Right_Click
+	Log ("Shift right " & Speed.Text)
+	Dim CommandPath As String
+	CommandPath = baseURL.Text & "drive/right/" & Speed.Text
+	restCall(CommandPath)
+End Sub
+
+Private Sub Left_Click
+	Log ("Shift left " & Speed.Text)
+	Dim CommandPath As String
+	CommandPath = baseURL.Text & "drive/left/" & Speed.Text
+	restCall(CommandPath)
+End Sub
+
+
+' Admin Operations
 
 Private Sub On_Click
 	Log ("power on")
@@ -139,7 +157,7 @@ Private Sub Shutdown_Click
 	restCall(CommandPath)
 End Sub
 
-
+' Recording operation
 Private Sub StartRecording_Click
 	Log ("Start recording")	
 	Dim input As B4XInputTemplate
@@ -233,3 +251,4 @@ Private Sub restCallback(CommandPath As String, returnValue As String, err As Bo
 		ResultsLabel.Text = "Error:" & returnValue
 	End If	
 End Sub
+
