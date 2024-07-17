@@ -12,14 +12,14 @@ Module1=Starter
 NumberOfFiles=1
 NumberOfLibraries=5
 NumberOfModules=1
-Version=12
+Version=12.8
 @EndOfDesignText@
 #Region  Project Attributes 
 	#ApplicationLabel: CarPI
 	#VersionCode: 1
 	#VersionName: 
 	'SupportedOrientations possible values: unspecified, landscape or portrait.
-	#SupportedOrientations: unspecified
+	#SupportedOrientations: portrait
 	#CanInstallToExternalStorage: False
 #End Region
 
@@ -35,6 +35,9 @@ Sub Process_Globals
 End Sub
 
 'https://github.com/sbhrepo/carPi/blob/main/src/recorder.py
+
+'screen aligenment
+'https://www.b4x.com/android/forum/threads/changing-orientation-causes-b4xpages-go-back-To-first-page.143835/ 
 
 Sub Globals
 	'These global variables will be redeclared each time the activity is created.
