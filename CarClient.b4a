@@ -64,6 +64,7 @@ Sub Globals
 	Private Repitition As EditText
 	Private Right As Button
 	Private Left As Button
+	Private EdtTTime As EditText
 End Sub
 
 Sub Activity_Create(FirstTime As Boolean)
@@ -96,7 +97,7 @@ End Sub
 Private Sub TurnRight_Click
 	Log ("Turn right " & Speed.Text)
 	Dim CommandPath As String
-	CommandPath = baseURL.Text & "drive/turnRight/" & Speed.Text
+	CommandPath = baseURL.Text & "drive/turnRight/" & Speed.Text & "/" & EdtTTime.Text
 	restCall(CommandPath)
 End Sub
 
@@ -104,7 +105,7 @@ End Sub
 Private Sub TurnLeft_Click
 	Log ("Turn left " & Speed.Text)
 	Dim CommandPath As String
-	CommandPath = baseURL.Text & "drive/turnLeft/" & Speed.Text
+	CommandPath = baseURL.Text & "drive/turnLeft/" & Speed.Text & "/" & EdtTTime.Text
 	restCall(CommandPath)
 End Sub
 
@@ -213,6 +214,9 @@ Private Sub CancelRecording_Click
 End Sub
 
 
+Private Sub EdtTTime_EnterPressed
+	Log ("TurnTime enter")
+End Sub
 
 
 
@@ -254,4 +258,5 @@ Private Sub restCallback(CommandPath As String, returnValue As String, err As Bo
 		ResultsLabel.Text = "Error:" & returnValue
 	End If	
 End Sub
+
 
