@@ -255,7 +255,8 @@ Private Sub restCallback(CommandPath As String, returnValue As String, err As Bo
 		'Return job.GetString
 	Else
 		Log ("Error:" & returnValue)
-		ResultsLabel.Text = "Error:" & returnValue
+		' ResultsLabel.Text = "Error:" & returnValue
+		Msgbox(returnValue,"Error on Server")
 	End If	
 End Sub
 
