@@ -49,7 +49,7 @@ Sub Globals
 	Private Stop As Button
 	Private Speed As EditText
 	Private ResultsLabel As Label
-	'Private CarIP = As String ("http://192.168.13.106:8090/")
+	'Private CarIP = As String ("http://192.168.11.106:8090/")
 	'Private CarIP = As String ("http://192.168.1.105:8090/") ' need to add firewall rule to let it get to R.PI
 	Private baseURL As EditText
 	Private On As Button
