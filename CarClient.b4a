@@ -66,6 +66,7 @@ Sub Globals
 	Private Left As Button
 	Private EdtTTime As EditText
 	Private BtnRemote As Button
+	Private ChkRemoteDebug As CheckBox
 	Private pnlRemoteDebug As Panel
 	Private btnRemoteBack As Button
 	Private lvRemoteDebug As ListView
@@ -166,6 +167,17 @@ Private Sub PositionRemoteButton
 	If buttonY < 5dip Then buttonY = 5dip
 	BtnRemote.SetLayout(buttonX, buttonY, buttonWidth, buttonHeight)
 	BtnRemote.BringToFront
+
+	Dim chkWidth As Int = buttonWidth
+	Dim chkHeight As Int = 36dip
+	ChkRemoteDebug.Initialize("ChkRemoteDebug")
+	ChkRemoteDebug.Text = "Debug mode"
+	ChkRemoteDebug.TextColor = Colors.RGB(50, 50, 50)
+	ChkRemoteDebug.Checked = False
+	Dim chkY As Int = buttonY - chkHeight - 4dip
+	If chkY < 2dip Then chkY = buttonY + buttonHeight + 4dip
+	Activity.AddView(ChkRemoteDebug, buttonX, chkY, chkWidth, chkHeight)
+	ChkRemoteDebug.BringToFront
 End Sub
 
 Private Sub AttachRemoteMotionListener
@@ -226,11 +238,11 @@ End Sub
 
 Private Sub ConnectRemoteController
 	RemoteCurrentSpeed = ParseSpeedFromUi
-	Dim connected As Boolean = True
-	If connected Then
-		RemoteConnected = True
-		BtnRemote.Color = Colors.RGB(30, 150, 70)
+	RemoteConnected = True
+	BtnRemote.Color = Colors.RGB(30, 150, 70)
+	If ChkRemoteDebug.Checked Then
 		BtnRemote.Visible = False
+		ChkRemoteDebug.Visible = False
 		SetTouchUiVisible(False)
 		pnlRemoteDebug.BringToFront
 		pnlRemoteDebug.Visible = True
@@ -239,13 +251,12 @@ Private Sub ConnectRemoteController
 		jo.RunMethod("requestFocus", Null)
 		AddDebugLog("remote connected")
 		AddDebugLog("input mode: left stick")
-		ResultsLabel.Text = "Remote connected"
 	Else
-		RemoteConnected = False
-		BtnRemote.Color = Colors.RGB(120, 120, 120)
-		ResultsLabel.Text = "Remote connection failed"
-		AddDebugLog("remote connection failed")
+		pnlRemoteInput.BringToFront
+		Dim jo2 As JavaObject = pnlRemoteInput
+		jo2.RunMethod("requestFocus", Null)
 	End If
+	ResultsLabel.Text = "Remote connected"
 End Sub
 
 Private Sub DisconnectRemoteController
@@ -253,7 +264,9 @@ Private Sub DisconnectRemoteController
 	pnlRemoteDebug.Visible = False
 	SetTouchUiVisible(True)
 	BtnRemote.Visible = True
+	ChkRemoteDebug.Visible = True
 	BtnRemote.BringToFront
+	ChkRemoteDebug.BringToFront
 	BtnRemote.Color = Colors.RGB(120, 120, 120)
 	ResultsLabel.Text = "Remote disconnected"
 	AddDebugLog("remote disconnected")
@@ -266,6 +279,11 @@ End Sub
 Private Sub btnClearDebug_Click
 	DebugLogItems.Clear
 	RefreshDebugList
+End Sub
+
+Private Sub RemoteApiCall(description As String, CommandPath As String)
+	AddDebugLog(description & " -> " & CommandPath)
+	restCall(CommandPath)
 End Sub
 
 Private Sub AddDebugLog(message As String)
@@ -291,25 +309,25 @@ Private Sub Activity_KeyPress(KeyCode As Int) As Boolean
 
 	Select KeyCode
 		Case KeyCodes.KEYCODE_DPAD_UP
-			AddDebugLog("forward")
+			RemoteApiCall("forward", baseURL.Text & "drive/front/" & RemoteCurrentSpeed)
 			Return True
 		Case KeyCodes.KEYCODE_DPAD_DOWN
-			AddDebugLog("backward")
+			RemoteApiCall("backward", baseURL.Text & "drive/back/" & RemoteCurrentSpeed)
 			Return True
 		Case KeyCodes.KEYCODE_DPAD_LEFT
-			AddDebugLog("left")
+			RemoteApiCall("left", baseURL.Text & "drive/left/" & RemoteCurrentSpeed)
 			Return True
 		Case KeyCodes.KEYCODE_DPAD_RIGHT
-			AddDebugLog("right")
+			RemoteApiCall("right", baseURL.Text & "drive/right/" & RemoteCurrentSpeed)
 			Return True
 		Case 96 'KEYCODE_BUTTON_A
-			AddDebugLog("stop")
+			RemoteApiCall("stop", baseURL.Text & "drive/stop")
 			Return True
 		Case 99 'KEYCODE_BUTTON_X
-			AddDebugLog("turn left")
+			RemoteApiCall("shift left", baseURL.Text & "drive/left/" & RemoteCurrentSpeed)
 			Return True
 		Case 97 'KEYCODE_BUTTON_B
-			AddDebugLog("turn right")
+			RemoteApiCall("shift right", baseURL.Text & "drive/right/" & RemoteCurrentSpeed)
 			Return True
 		Case 102 'KEYCODE_BUTTON_L1
 			RemoteCurrentSpeed = Max(0, RemoteCurrentSpeed - 5)
@@ -443,7 +461,17 @@ Private Sub RemoteMotion_Event (MethodName As String, Args() As Object) As Objec
 
 	If newState <> RemoteStickState Then
 		RemoteStickState = newState
-		AddDebugLog("stick " & newState)
+		If newState = "forward" Then
+			RemoteApiCall("stick forward", baseURL.Text & "drive/front/" & RemoteCurrentSpeed)
+		Else If newState = "backward" Then
+			RemoteApiCall("stick backward", baseURL.Text & "drive/back/" & RemoteCurrentSpeed)
+		Else If newState = "left" Then
+			RemoteApiCall("stick turn left", baseURL.Text & "drive/turnLeft/" & RemoteCurrentSpeed & "/" & EdtTTime.Text)
+			Else If newState = "right" Then
+			RemoteApiCall("stick turn right", baseURL.Text & "drive/turnRight/" & RemoteCurrentSpeed & "/" & EdtTTime.Text)
+		Else
+			RemoteApiCall("stick center - stop", baseURL.Text & "drive/stop")
+		End If
 	End If
 
 	Return False
@@ -511,7 +539,8 @@ Private Sub restCallback(CommandPath As String, returnValue As String, err As Bo
 	Log ("In restCallback with ["& err & "] " & CommandPath & ":" & returnValue )
 	If (err == False) Then
 		Log ("Found:" & returnValue)
-		ResultsLabel.Text = returnValue
+		If RemoteConnected = False Then ResultsLabel.Text = returnValue
+		If RemoteConnected And ChkRemoteDebug.Checked Then AddDebugLog("response: " & returnValue)
 		
 		If (CommandPath.EndsWith("recordings")) Then ' refresh list
 			Dim buffer() As String = Regex.Split(" ",returnValue)
