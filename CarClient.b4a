@@ -65,10 +65,30 @@ Sub Globals
 	Private Right As Button
 	Private Left As Button
 	Private EdtTTime As EditText
+	Private BtnRemote As Button
+	Private pnlRemoteDebug As Panel
+	Private btnRemoteBack As Button
+	Private lvRemoteDebug As ListView
+	Private lblRemoteTitle As Label
+	Private btnClearDebug As Button
+	Private RemoteConnected As Boolean
+	Private RemoteCurrentSpeed As Int
+	Private DebugLogItems As List
+	Private TouchUiViews As List
+	Private RemoteMotionListener As Object
+	Private RemoteStickState As String
+	Private pnlRemoteInput As Panel
 End Sub
 
 Sub Activity_Create(FirstTime As Boolean)
 	Activity.LoadLayout("carLayout")
+	DebugLogItems.Initialize
+	TouchUiViews.Initialize
+	RemoteStickState = ""
+	SetupRemoteUi
+	PositionRemoteButton
+	AttachRemoteMotionListener
+	RemoteCurrentSpeed = ParseSpeedFromUi
 	Log("Welcome to Car-PI")
 End Sub
 
@@ -78,6 +98,230 @@ End Sub
 
 Sub Activity_Pause (UserClosed As Boolean)
 
+End Sub
+
+Private Sub SetupRemoteUi
+	RegisterTouchUiViews
+
+	BtnRemote.Initialize("BtnRemote")
+	BtnRemote.Text = "REMOTE " & Chr(0x1F3AE)
+	BtnRemote.TextSize = 13
+	BtnRemote.Color = Colors.RGB(120, 120, 120)
+	BtnRemote.TextColor = Colors.White
+	Activity.AddView(BtnRemote, 5dip, 5dip, 115dip, 42dip)
+	Dim joBtn As JavaObject = BtnRemote
+	joBtn.RunMethod("setFocusable", Array(False))
+	joBtn.RunMethod("setFocusableInTouchMode", Array(False))
+
+	pnlRemoteDebug.Initialize("")
+	pnlRemoteDebug.Color = Colors.Black
+	pnlRemoteDebug.Visible = False
+	Activity.AddView(pnlRemoteDebug, 0, 0, 100%x, 100%y)
+
+	lblRemoteTitle.Initialize("")
+	lblRemoteTitle.Text = "Remote Debug View"
+	lblRemoteTitle.TextColor = Colors.White
+	lblRemoteTitle.TextSize = 20
+	lblRemoteTitle.Gravity = Gravity.CENTER_VERTICAL
+	pnlRemoteDebug.AddView(lblRemoteTitle, 10dip, 10dip, 70%x, 40dip)
+
+	btnRemoteBack.Initialize("btnRemoteBack")
+	btnRemoteBack.Text = "Close"
+	btnRemoteBack.Color = Colors.RGB(180, 40, 40)
+	btnRemoteBack.TextColor = Colors.White
+	pnlRemoteDebug.AddView(btnRemoteBack, 78%x, 10dip, 20%x, 40dip)
+	Dim joBack As JavaObject = btnRemoteBack
+	joBack.RunMethod("setFocusable", Array(False))
+	joBack.RunMethod("setFocusableInTouchMode", Array(False))
+
+	btnClearDebug.Initialize("btnClearDebug")
+	btnClearDebug.Text = "Clear"
+	btnClearDebug.Color = Colors.RGB(60, 60, 60)
+	btnClearDebug.TextColor = Colors.White
+	pnlRemoteDebug.AddView(btnClearDebug, 10dip, 10dip, 16%x, 40dip)
+	Dim joClear As JavaObject = btnClearDebug
+	joClear.RunMethod("setFocusable", Array(False))
+	joClear.RunMethod("setFocusableInTouchMode", Array(False))
+
+	lvRemoteDebug.Initialize("lvRemoteDebug")
+	pnlRemoteDebug.AddView(lvRemoteDebug, 10dip, 60dip, 96%x - 20dip, 100%y - 70dip)
+	Dim joList As JavaObject = lvRemoteDebug
+	joList.RunMethod("setFocusable", Array(False))
+	joList.RunMethod("setFocusableInTouchMode", Array(False))
+
+	pnlRemoteInput.Initialize("")
+	pnlRemoteInput.Color = Colors.Transparent
+	pnlRemoteInput.Visible = False
+	pnlRemoteInput.Enabled = True
+	pnlRemoteInput.SetLayout(0, 0, 1dip, 1dip)
+	Activity.AddView(pnlRemoteInput, 0, 0, 1dip, 1dip)
+End Sub
+
+Private Sub PositionRemoteButton
+	Dim buttonWidth As Int = 115dip
+	Dim buttonHeight As Int = 42dip
+	Dim buttonX As Int = (Left.Left + Right.Left + Right.Width - buttonWidth) / 2
+	Dim buttonY As Int = Left.Top + ((Left.Height - buttonHeight) / 2)
+	If buttonX < 5dip Then buttonX = 5dip
+	If buttonY < 5dip Then buttonY = 5dip
+	BtnRemote.SetLayout(buttonX, buttonY, buttonWidth, buttonHeight)
+	BtnRemote.BringToFront
+End Sub
+
+Private Sub AttachRemoteMotionListener
+	Dim jo As JavaObject
+	jo = pnlRemoteInput
+	RemoteMotionListener = jo.CreateEvent("android.view.View$OnGenericMotionListener", "RemoteMotion", False)
+	jo.RunMethod("setOnGenericMotionListener", Array(RemoteMotionListener))
+	jo.RunMethod("setFocusableInTouchMode", Array(True))
+	jo.RunMethod("requestFocus", Null)
+End Sub
+
+Private Sub RegisterTouchUiViews
+	TouchUiViews.Clear
+	TouchUiViews.Add(Backward)
+	TouchUiViews.Add(Forward)
+	TouchUiViews.Add(TurnLeft)
+	TouchUiViews.Add(TurnRight)
+	TouchUiViews.Add(Shutdown)
+	TouchUiViews.Add(Stop)
+	TouchUiViews.Add(Speed)
+	TouchUiViews.Add(baseURL)
+	TouchUiViews.Add(On)
+	TouchUiViews.Add(Off)
+	TouchUiViews.Add(Status)
+	TouchUiViews.Add(StartRecording)
+	TouchUiViews.Add(StopRecording)
+	TouchUiViews.Add(CancelRecording)
+	TouchUiViews.Add(RefreshRecording)
+	TouchUiViews.Add(Recordings)
+	TouchUiViews.Add(Repitition)
+	TouchUiViews.Add(Right)
+	TouchUiViews.Add(Left)
+	TouchUiViews.Add(EdtTTime)
+End Sub
+
+Private Sub SetTouchUiVisible(isVisible As Boolean)
+	For i = 0 To TouchUiViews.Size - 1
+		Dim v As View = TouchUiViews.Get(i)
+		v.Visible = isVisible
+	Next
+End Sub
+
+Private Sub ParseSpeedFromUi As Int
+	Dim s As String = Speed.Text
+	If IsNumber(s) Then
+		Return Max(0, s)
+	End If
+	Return 50
+End Sub
+
+Private Sub BtnRemote_Click
+	If RemoteConnected Then
+		DisconnectRemoteController
+	Else
+		ConnectRemoteController
+	End If
+End Sub
+
+Private Sub ConnectRemoteController
+	RemoteCurrentSpeed = ParseSpeedFromUi
+	Dim connected As Boolean = True
+	If connected Then
+		RemoteConnected = True
+		BtnRemote.Color = Colors.RGB(30, 150, 70)
+		BtnRemote.Visible = False
+		SetTouchUiVisible(False)
+		pnlRemoteDebug.BringToFront
+		pnlRemoteDebug.Visible = True
+		pnlRemoteInput.BringToFront
+		Dim jo As JavaObject = pnlRemoteInput
+		jo.RunMethod("requestFocus", Null)
+		AddDebugLog("remote connected")
+		AddDebugLog("input mode: left stick")
+		ResultsLabel.Text = "Remote connected"
+	Else
+		RemoteConnected = False
+		BtnRemote.Color = Colors.RGB(120, 120, 120)
+		ResultsLabel.Text = "Remote connection failed"
+		AddDebugLog("remote connection failed")
+	End If
+End Sub
+
+Private Sub DisconnectRemoteController
+	RemoteConnected = False
+	pnlRemoteDebug.Visible = False
+	SetTouchUiVisible(True)
+	BtnRemote.Visible = True
+	BtnRemote.BringToFront
+	BtnRemote.Color = Colors.RGB(120, 120, 120)
+	ResultsLabel.Text = "Remote disconnected"
+	AddDebugLog("remote disconnected")
+End Sub
+
+Private Sub btnRemoteBack_Click
+	DisconnectRemoteController
+End Sub
+
+Private Sub btnClearDebug_Click
+	DebugLogItems.Clear
+	RefreshDebugList
+End Sub
+
+Private Sub AddDebugLog(message As String)
+	Dim stamped As String = DateTime.Time(DateTime.Now) & " - " & message
+	DebugLogItems.InsertAt(0, stamped)
+	RefreshDebugList
+End Sub
+
+Private Sub RefreshDebugList
+	lvRemoteDebug.Clear
+	For i = 0 To DebugLogItems.Size - 1
+		lvRemoteDebug.AddSingleLine(DebugLogItems.Get(i))
+	Next
+End Sub
+
+Private Sub Activity_KeyPress(KeyCode As Int) As Boolean
+	If KeyCode = KeyCodes.KEYCODE_BACK And pnlRemoteDebug.Visible Then
+		DisconnectRemoteController
+		Return True
+	End If
+
+	If RemoteConnected = False Then Return False
+
+	Select KeyCode
+		Case KeyCodes.KEYCODE_DPAD_UP
+			AddDebugLog("forward")
+			Return True
+		Case KeyCodes.KEYCODE_DPAD_DOWN
+			AddDebugLog("backward")
+			Return True
+		Case KeyCodes.KEYCODE_DPAD_LEFT
+			AddDebugLog("left")
+			Return True
+		Case KeyCodes.KEYCODE_DPAD_RIGHT
+			AddDebugLog("right")
+			Return True
+		Case 96 'KEYCODE_BUTTON_A
+			AddDebugLog("stop")
+			Return True
+		Case 99 'KEYCODE_BUTTON_X
+			AddDebugLog("turn left")
+			Return True
+		Case 97 'KEYCODE_BUTTON_B
+			AddDebugLog("turn right")
+			Return True
+		Case 102 'KEYCODE_BUTTON_L1
+			RemoteCurrentSpeed = Max(0, RemoteCurrentSpeed - 5)
+			AddDebugLog("speed down to " & RemoteCurrentSpeed)
+			Return True
+		Case 103 'KEYCODE_BUTTON_R1
+			RemoteCurrentSpeed = Min(100, RemoteCurrentSpeed + 5)
+			AddDebugLog("speed up to " & RemoteCurrentSpeed)
+			Return True
+		Case Else
+			Return False
+	End Select
 End Sub
 
 'https://www.b4x.com/etp.html?vimeography_gallery=1&vimeography_video=256583317
@@ -176,6 +420,33 @@ Private Sub StartRecording_Click
 		CommandPath = baseURL.Text & "recording/start/" & input.Text
 		restCall(CommandPath)		
 	End If	
+End Sub
+
+Private Sub RemoteMotion_Event (MethodName As String, Args() As Object) As Object
+	If RemoteConnected = False Then Return False
+
+	Dim motion As JavaObject = Args(1)
+	Dim axisX As Float = motion.RunMethod("getAxisValue", Array(0))
+	Dim axisY As Float = motion.RunMethod("getAxisValue", Array(1))
+	Dim deadZone As Float = 0.20
+	Dim newState As String = "center"
+
+	If axisY < -deadZone Then
+		newState = "forward"
+	Else If axisY > deadZone Then
+		newState = "backward"
+	Else If axisX < -deadZone Then
+		newState = "left"
+	Else If axisX > deadZone Then
+		newState = "right"
+	End If
+
+	If newState <> RemoteStickState Then
+		RemoteStickState = newState
+		AddDebugLog("stick " & newState)
+	End If
+
+	Return False
 End Sub
 
 Private Sub StopRecording_Click
