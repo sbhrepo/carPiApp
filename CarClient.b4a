@@ -236,7 +236,33 @@ Private Sub BtnRemote_Click
 	End If
 End Sub
 
+Private Sub IsGamepadConnected As Boolean
+	Try
+		Dim joDevice As JavaObject
+		joDevice.InitializeStatic("android.view.InputDevice")
+		Dim ids() As Int = joDevice.RunMethod("getDeviceIds", Null)
+		For Each id As Int In ids
+			Dim device As JavaObject = joDevice.RunMethod("getDevice", Array(id))
+			If device.IsInitialized Then
+				Dim sources As Int = device.RunMethod("getSources", Null)
+				' SOURCE_GAMEPAD = 0x401 = 1025, SOURCE_JOYSTICK = 0x1000010 = 16777232
+				If Bit.And(sources, 1025) = 1025 Or Bit.And(sources, 16777232) = 16777232 Then
+					Return True
+				End If
+			End If
+		Next
+	Catch
+		Log("IsGamepadConnected error: " & LastException.Message)
+	End Try
+	Return False
+End Sub
+
 Private Sub ConnectRemoteController
+	If IsGamepadConnected = False Then
+		ResultsLabel.Text = "No controller found"
+		AddDebugLog("connect failed: no gamepad detected")
+		Return
+	End If
 	RemoteCurrentSpeed = ParseSpeedFromUi
 	RemoteConnected = True
 	BtnRemote.Color = Colors.RGB(30, 150, 70)
